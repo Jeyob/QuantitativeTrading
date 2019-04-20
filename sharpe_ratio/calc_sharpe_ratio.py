@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from decimal import Decimal
+import maximum_draw_down as MDD
+import matplotlib
+from matplotlib import pyplot as plt
 
 def ANNUALISED_AVG_RISK_FREE_RATE() -> float: 
     return 0.04 #dummy value assuming 4% annualised risk free interest rate
@@ -80,7 +83,7 @@ def calc_sharp_ratio(df_prices: pd.DataFrame):
     
     return sharp_ratio
 
-def calc_sharp_ratio_market_neutral(df_prices1: pd.DataFrame, df_prices2: pd.DataFrame) -> float:
+def calc_sharp_ratio_market_neutral(df_prices1: pd.DataFrame, df_prices2: pd.DataFrame) -> (float, float, int):
 
     cls1 = np.array(df_prices1['Closing price']) #IGE price frame
     cls2 = np.array(df_prices2['Closing price']) #SPY price frame
@@ -90,12 +93,21 @@ def calc_sharp_ratio_market_neutral(df_prices1: pd.DataFrame, df_prices2: pd.Dat
 
     #because we now have twice as much capital we must divide by two
     netret = (daily_returns1 - daily_returns2)/2
+    cumret = MDD.calc_cumulative_return(netret) #cumulative profit/loss curve
+    maxDD, maxDDperiod = MDD.calculateMaxDD(cumret) #calculate maxdrawdown and period
 
+    ######### PLOT Cumulative return curve ############
+    ax = plt.subplot()
+    ax.plot(cumret)
+    ax.set(xlabel='Days', ylabel='Cumulative Return')
+    plt.show()
+    ######## END OF PLOT STUB #########################
+    
     excess_daily_returns = netret #we do not substract the risk-free rate from the returns as the short position essentially financies the purchase of the long position
 
     sharp_ratio = (np.sqrt(NUM_TRADING_PERIODS_ANNUALLY()) * np.mean(excess_daily_returns))/np.std(excess_daily_returns)
      
-    return sharp_ratio
+    return sharp_ratio, maxDD, maxDDperiod
 
 #price_frame = create_price_frame_NASDAQ(filename='ERIC-B-2018-01-01-2019-01-01.csv')
 price_frame_IGE = create_price_frame_YAHOO(folder_path="./source_data", filename='IGE.csv', seperator=',')
@@ -107,6 +119,7 @@ sharp_ratio = calc_sharp_ratio(price_frame_IGE)
 
 print("\nSharp ratio (long-only): {0}\n".format(sharp_ratio))
 
-sharp_ratio_market_neutral = calc_sharp_ratio_market_neutral(price_frame_IGE, price_frame_SPY)
+sharp_ratio_market_neutral, maxDD, maxDDperiod = calc_sharp_ratio_market_neutral(price_frame_IGE, price_frame_SPY)
 
 print("Sharp ratio (market neutral): {0}\n".format(sharp_ratio_market_neutral))
+print("Maximum drawdown (market neutral): {0}\nMaximum drawdown duration (market neutral) {1}".format(maxDD, maxDDperiod))
