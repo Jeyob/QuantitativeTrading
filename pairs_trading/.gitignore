@@ -1,0 +1,7 @@
+# Jupiter files
+*.ipynb
+
+# VS code workspace file
+*.code-workspace
+
+
